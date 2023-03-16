@@ -7,7 +7,8 @@ import org.springframework.http.HttpStatus;
 @Getter
 @AllArgsConstructor
 public enum ExceptionEnum {
-    INVAILD_TOKEN(HttpStatus.BAD_REQUEST, "토큰이 유효하지 않습니다."),
+
+    INVALILD_TOKEN(HttpStatus.BAD_REQUEST, "토큰이 유효하지 않습니다."),
     NOT_TOKEN(HttpStatus.BAD_REQUEST, "로그인 해주세요.(토큰없음)"),
 
     ONLY_ADMIN(HttpStatus.BAD_REQUEST, "관리자계정으로 삭제가능합니다."),

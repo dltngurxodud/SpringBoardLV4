@@ -29,7 +29,7 @@ public class Post extends Timestamped{
     @JoinColumn(name = "user_id") //
     private User user; // post와 조인해서 다대일 관계 만들고
 
-    @OneToMany (mappedBy = "post") // 변수이름이랑 mappedBy랑 이름이 같아야 한다.
+    @OneToMany (mappedBy = "post", cascade = CascadeType.ALL) // 변수이름이랑 mappedBy랑 이름이 같아야 한다. CascadeType.ALL 모든 경우를 포함. CascadeType.REMOVE 이거는 삭제할때 사용.
     private List<Comment> comment; // 댓글을 리스트로 받아온다. One에서는 리스트로 받아옴
 
 

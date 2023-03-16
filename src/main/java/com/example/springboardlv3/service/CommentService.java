@@ -11,12 +11,10 @@ import com.example.springboardlv3.exception.ExceptionEnum;
 import com.example.springboardlv3.jwt.JwtUtil;
 import com.example.springboardlv3.repository.CommentRepository;
 import com.example.springboardlv3.repository.PostRepository;
+import com.example.springboardlv3.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
-import javax.servlet.http.HttpServletRequest;
 import javax.transaction.Transactional;
 
 @Service
@@ -25,7 +23,7 @@ public class CommentService {
 
     private final CommentRepository commentRepository;
     private final PostRepository postRepository;
-    private final JwtUtil jwtUtil;
+    private final UserRepository userRepository;
 
     private Post getPost(Long postId) {
         return postRepository.findById(postId).orElseThrow(
@@ -33,7 +31,7 @@ public class CommentService {
         );
     }
 
-    private Comment getComment(Long replyId){
+    private Comment getComment(Long replyId) {
         return commentRepository.findById(replyId).orElseThrow(
                 () -> new IllegalArgumentException("댓글이 존재하지 않습니다.")
         );
@@ -46,37 +44,45 @@ public class CommentService {
         );
     }
 
-    @Transactional
-    public CommentResponseDto createComment(CommentRequestDto commentRequestDto, HttpServletRequest request) {
-        User user = jwtUtil.getUser(request);
-        Post post = getPost(commentRequestDto.getPostId());
-
-        Comment comment = commentRepository.saveAndFlush(new Comment(commentRequestDto.getComment(), user, post));
-        return new CommentResponseDto(comment, user.getUsername());
+    private User userInfo(String userName) {
+        return userRepository.findByUsername(userName).orElseThrow(() -> new ApiException(ExceptionEnum.NOT_FOUND_USER) // 회원을 찾을 수 없습니다.
+        );
     }
 
     @Transactional
-    public CommentResponseDto update(Long commentId, CommentRequestDto commentRequestDto, HttpServletRequest request) {
-        User user = jwtUtil.getUser(request);
+    public CommentResponseDto createComment(CommentRequestDto commentRequestDto, String userName) {
+
+        User user = userInfo(userName);
+        Post post = getPost(commentRequestDto.getPostId());
+
+        Comment comment = commentRepository.saveAndFlush(new Comment(commentRequestDto.getComment(), user, post));
+        return new CommentResponseDto(comment, userName);
+    }
+
+    @Transactional
+    public CommentResponseDto update(Long commentId, CommentRequestDto commentRequestDto, String userName) {
+        User user = userInfo(userName);
+
         Comment comment = getCommentAdminInfo(commentId, user); // 관리자 권한 밑에는 유저가 댓글쓰기인데 이렇게 써버리면 밑에 관리자 메서드 거치면서 관리자 체크 하면서 관리자와 유저 거르기?
-//        Comment comment = getComment(commentId);
+//      Comment comment = getComment(commentId);
         checkRole(commentId, user);
         comment.update(commentRequestDto);
         return new CommentResponseDto(comment, user.getUsername());
     }
 
     @Transactional
-    public ResponseEntity<String> delete(Long commentId, HttpServletRequest request) {
-        User user = jwtUtil.getUser(request);
+    public void delete(Long commentId, String userName) {
+        User user = userInfo(userName);
 //        Comment comment = getCommentAdminInfo(commentId, user);
         getComment(commentId); // 위와 같은 것이라서 주석처리 해야하는것?
         checkRole(commentId, user);
         commentRepository.deleteById(commentId);
-        return ResponseEntity.status(HttpStatus.OK).body("댓글 삭제 완료");
+//        return ResponseEntity.status(HttpStatus.OK).body("댓글 삭제 완료");
     }
 
 
-    // 관리자 계정만 모든 댓글 수정, 삭제 가능
+
+//    관리자 계정만 모든 댓글 수정, 삭제 가능
     public Comment getCommentAdminInfo(Long id, User user) {
         Comment comment;
         if (user.getRole().equals(UserRoleEnum.ADMIN)) {
