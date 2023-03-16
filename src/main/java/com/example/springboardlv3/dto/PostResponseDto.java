@@ -36,5 +36,6 @@ public class PostResponseDto {
         this.content = post.getContent();
         this.createdAt = post.getCreatedAt();
         this.comment = commentResponseDtoList;
+        //List<CommentResponseDto> CommentResponseDtoList = new ArrayList<>(); 를 쓰는이유?
     }
 }

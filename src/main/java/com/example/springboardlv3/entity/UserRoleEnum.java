@@ -1,7 +1,7 @@
 package com.example.springboardlv3.entity;
 
 public enum UserRoleEnum { // 여기 부분은 권한을 허용 관리를 하는 부분으로써 꼭 필요하죠?
-    USER(Authority.USER),  // 사용자 권한
+    USER(Authority.USER),  // 사용자 권한 // 나머지 다 없애고 Role로 하기
     ADMIN(Authority.ADMIN);  // 관리자 권한
 
     private final String authority;

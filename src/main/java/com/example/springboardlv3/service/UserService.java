@@ -25,9 +25,11 @@ public class UserService {
 
     // 회원가입
     @Transactional
-    public void signup(SignupRequestDto signupRequestDto) {
+    public void signup(SignupRequestDto signupRequestDto) { // 문구만 넘겨줄때는 컨트롤러에 상태메시지 써라
         String username = signupRequestDto.getUsername();
         String password = signupRequestDto.getPassword();
+
+//        UserRoleEnum.ADMIN.name(); // 스트링을 받고싶을때는 이렇게 사용하고 아닐때는 name 빼고 사용
 
         Optional<User> found = userRepository.findByUsername(username);
         if (found.isPresent()) { // true면 실행 false면 통과

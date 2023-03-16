@@ -21,6 +21,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import javax.persistence.CascadeType;
 import javax.servlet.http.HttpServletRequest;
 import java.util.ArrayList;
 import java.util.List;
@@ -42,8 +43,13 @@ public class PostService {
 
     // 생성 부분
     @Transactional
-    public PostResponseDto createPost(PostRequestDto postRequestDto, HttpServletRequest request) { // 토큰이 확인되면 생성되는 구문을 만들자
-        User user = userInfo(request);
+    public PostResponseDto createPost(PostRequestDto postRequestDto, String userName) { // 토큰이 확인되면 생성되는 구문을 만들자 userDetails.getUsername() // userName : 토큰에서 가져온 아이디 치는 값
+//        User user = userInfo(request);
+
+        User user = userRepository.findByUsername(userName).orElseThrow(
+                () -> new ApiException(ExceptionEnum.NOT_FOUND_USER) // 회원을 찾을 수 없습니다.
+//                     new IllegalArgumentException("사용자가 존재하지 않습니다.")
+        );
 
         Post post = postRepository.saveAndFlush(new Post(postRequestDto, user)); // saveAndFlush : 메소드는 실행중(트랜잭션)에 즉시 data를 flush 한다. saveAndFlush() 메소드는 Spring Data JPA 에서 정의한 JpaRepository 인터페이스의 메소드이다. saveAndFlush() 메소드는 즉시 DB 에 변경사항을 적용하는 방식
 
@@ -73,9 +79,12 @@ public class PostService {
 
     // 수정부분
     @Transactional
-    public PostResponseDto updatePost(Long id, PostRequestDto postRequestDto, HttpServletRequest request) {
-        User user = userInfo(request); // request : 어떤 정보를 가져오기 위해 사용 토큰을 먼저 세팅을 해야 가져온다.
+    public PostResponseDto updatePost(Long id, PostRequestDto postRequestDto, String userName) { // userName은 id 값
+//        User user = userInfo(request); // request : 어떤 정보를 가져오기 위해 사용 토큰을 먼저 세팅을 해야 가져온다.
 //        Post post1 = getPostAdminInfo(id, user);
+
+        User user = userInfo(userName);
+
         Post post = postRepository.findById(id).orElseThrow(
                 () -> new ApiException(ExceptionEnum.NOT_FOUND_POST_ALL)// 게시글이 없습니다.
 //        new IllegalArgumentException("게시물이 존재하지 않습니다.")
@@ -83,7 +92,7 @@ public class PostService {
 
         post.getUser().getId(); // post에 있는 user객체를 뽑아와서 user객체 안에 있는 getid를 뽑아옴
 
-        if (post.getUser().getId().equals(user.getId()) || user.getRole() == UserRoleEnum.ADMIN) {
+        if (post.getUser().getId().equals(user.getId()) || user.getRole().equals(UserRoleEnum.ADMIN)) {
             post.update(postRequestDto);
         }
         else {
@@ -114,14 +123,16 @@ public class PostService {
 
     // 삭제
     @Transactional
-    public ResponseDto delete (Long id, HttpServletRequest request){ // 반환 타입을 전부 Dto로 해줘야 하나요?
-        User user = userInfo(request);
+    public ResponseDto delete (Long id, String userName){ // 반환 타입을 전부 Dto로 해줘야 하나요?
+//        User user = userInfo(request);
+        User user = userInfo(userName);
+
         Post post = postRepository.findById(id).orElseThrow(
                 () -> new IllegalArgumentException("게시물이 존재하지 않습니다.")
         );
 
-        if (post.getUser().getId().equals(user.getId()) || user.getRole() == UserRoleEnum.ADMIN) { // 수정한 부분
-            commentRepository.deleteByPostId(id);
+        if (post.getUser().getId().equals(user.getId()) || user.getRole().equals(UserRoleEnum.ADMIN)) { // 수정한 부분
+//          commentRepository.deleteByPostId(id); 게시글 삭제만 해도 삭제 가능해서 주석처리?
             postRepository.deleteById(id);
         }
         else {
@@ -131,29 +142,33 @@ public class PostService {
         return new ResponseDto("삭제 완료", HttpStatus.OK.value());
     }
 
-
-    private User userInfo(HttpServletRequest request) { // 여기 부분은 무엇인가? 유저 메서드를 끌고와서 토큰?
-        String token = jwtUtil.resolveToken(request); // request로 사용자 정보 가져오기 토큰 가져오기
-        Claims claims;
-
-        if(token != null) {
-            if (jwtUtil.validateToken(token)) {
-                // 토큰에서 사용자 정보 가져오기
-                claims = jwtUtil.getUserInfoFromToken(token);
-            }
-            else {
-                throw new IllegalArgumentException("토큰 에러");
-            }
-            // 토큰에서 가져온 사용자 정보를 사용하여 DB 조회
-            User user = userRepository.findByUsername(claims.getSubject()).orElseThrow(
-                    () -> new ApiException(ExceptionEnum.NOT_FOUND_USER) // 회원을 찾을 수 없습니다.
-//                     new IllegalArgumentException("사용자가 존재하지 않습니다.")
-            );
-            return user;
-        } else {
-            throw new IllegalArgumentException("해당 토큰값과 일치하는 정보가 없습니다.");
-        }
+    private User userInfo(String userName) {
+        return userRepository.findByUsername(userName).orElseThrow( () -> new ApiException(ExceptionEnum.NOT_FOUND_USER) // 회원을 찾을 수 없습니다.
+        );
     }
+
+//    private User userInfo(HttpServletRequest request) { // 여기 부분은 무엇인가? 유저 메서드를 끌고와서 토큰?
+//        String token = jwtUtil.resolveToken(request); // request로 사용자 정보 가져오기 토큰 가져오기
+//        Claims claims;
+//
+//        if(token != null) {
+//            if (jwtUtil.validateToken(token)) {
+//                // 토큰에서 사용자 정보 가져오기
+//                claims = jwtUtil.getUserInfoFromToken(token);
+//            }
+//            else {
+//                throw new IllegalArgumentException("토큰 에러");
+//            }
+//            // 토큰에서 가져온 사용자 정보를 사용하여 DB 조회
+//            User user = userRepository.findByUsername(claims.getSubject()).orElseThrow(
+//                    () -> new ApiException(ExceptionEnum.NOT_FOUND_USER) // 회원을 찾을 수 없습니다.
+////                     new IllegalArgumentException("사용자가 존재하지 않습니다.")
+//            );
+//            return user;
+//        } else {
+//            throw new IllegalArgumentException("해당 토큰값과 일치하는 정보가 없습니다.");
+//        }
+//    }
 
 
 //    // 관리자 계정만 모든 게시글 수정, 삭제 가능
